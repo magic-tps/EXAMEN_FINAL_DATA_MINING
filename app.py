@@ -1,46 +1,46 @@
-import joblib
 import streamlit as st
+import pandas as pd
+import joblib
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 
-# Cargar todos los modelos desde el archivo único
-modelos = joblib.load('modelos_clasificacion.pkl')
-lin_reg = modelos["regresion_lineal"]
-svc = modelos["svc"]
-log_reg = modelos["regresion_logistica"]
+# Cargar los modelos guardados
+rf_model = joblib.load('rf_best_model.pkl')
+knn_model = joblib.load('knn_best_model.pkl')
+
+# Título de la aplicación
+st.title("Predicción de Supervivencia Titanic")
+st.write("Utilice este modelo para predecir la supervivencia de un pasajero en el Titanic utilizando los modelos entrenados de Random Forest y K-Nearest Neighbors.")
+
+# Inputs para el usuario
+st.sidebar.header("Ingrese los detalles del pasajero")
+Pclass = st.sidebar.selectbox("Pclass", [1, 2, 3])
+Sex = st.sidebar.selectbox("Sex", ["Mujer", "Hombre"])
+Age = st.sidebar.number_input("Age", min_value=0, value=30)
+SibSp = st.sidebar.number_input("SibSp", min_value=0, value=0)
+Parch = st.sidebar.number_input("Parch", min_value=0, value=0)
+Fare = st.sidebar.number_input("Fare", min_value=0.0, value=7.25)
+Embarked = st.sidebar.selectbox("Embarked", ['C', 'Q', 'S'])
+
+# Convertir entradas a formato numérico
+Sex = 1 if Sex == "Hombre" else 0
+Embarked = {'C': 0, 'Q': 1, 'S': 2}[Embarked]
+
+# Crear un DataFrame con las entradas
+input_data = pd.DataFrame([[Pclass, Sex, Age, SibSp, Parch, Fare, Embarked]], columns=['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked'])
+
+# Escalar los datos
+scaler = StandardScaler()
+input_data_scaled = scaler.fit_transform(input_data)
+
+# Botón para hacer predicción
+if st.button("Predecir Supervivencia"):
+    # Hacer predicciones con ambos modelos
+    rf_prediction = rf_model.predict(input_data_scaled)[0]
+    knn_prediction = knn_model.predict(input_data_scaled)[0]
+
+    # Mostrar los resultados
+    st.write(f"**Predicción de Random Forest:** {'Superviviente' if rf_prediction == 1 else 'No sobreviviente'}")
+    st.write(f"**Predicción de K-Nearest Neighbors:** {'Superviviente' if knn_prediction == 1 else 'No sobreviviente'}")
 
 
-clase_map = {
-    0: 'Anabas testudineus',
-    1: 'Coilia dussumieri',
-    3: 'Otolithoides biauritus',
-    4: 'Otolithoides pama',
-    5: 'Pethia conchonius',
-    6: 'Polynemus paradiseus',
-    7: 'Puntius lateristriga',
-    8: 'Setipinna taty',
-    9: 'Sillaginopsis panijus',
-}
-  
-# Crear la interfaz de Streamlit
-st.title("Aplicación de Clasificación de Especies")
-
-# Entrada del usuario
-st.header("Ingrese los valores para clasificar la especie")
-length = st.number_input("Longitud", min_value=0.0, step=0.1)
-weight = st.number_input("Peso", min_value=0.0, step=0.1)
-w_l_ratio = st.number_input("Relación Peso-Longitud", min_value=0.0, step=0.01)
-
-# Botón de predicción
-if st.button("Predecir"):
-    input_data = np.array([[length, weight, w_l_ratio]])
-
-    # Predicciones con los modelos y mapeo al nombre de la clase
-    pred_lin_reg = clase_map[lin_reg.predict(input_data).round().astype(int)[0]]
-    pred_svc = clase_map[svc.predict(input_data)[0]]
-    pred_log_reg = clase_map[log_reg.predict(input_data)[0]]
-
-    # Mostrar resultados
-    st.subheader("Resultados de las Predicciones")
-    st.write(f"**Regresión Lineal Predice:** {pred_lin_reg}")
-    st.write(f"**SVC Predice:** {pred_svc}")
-    st.write(f"**Regresión Logística Predice:** {pred_log_reg}")
